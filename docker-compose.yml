@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: serveruniversy
+      POSTGRES_USER: serveruniversy
+      POSTGRES_PASSWORD: serveruniversy
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U serveruniversy -d serveruniversy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://serveruniversy:serveruniversy@db:5432/serveruniversy
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the project .env file}
+      DEBUG: "false"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./static:/app/static
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
