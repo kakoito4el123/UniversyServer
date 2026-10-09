@@ -28,9 +28,12 @@ class Settings(BaseSettings):
         if not isinstance(value, str):
             raise ValueError("DATABASE_URL должен быть строкой")
 
-        # Разрешаем локальную базу SQLite
-        if value.startswith("sqlite"):
+        if value.startswith("sqlite+aiosqlite://"):
             return value
+        if value.startswith("sqlite:///"):
+            return value.replace("sqlite:///", "sqlite+aiosqlite:///", 1)
+        if value.startswith("sqlite://"):
+            return value.replace("sqlite://", "sqlite+aiosqlite://", 1)
 
         if value.startswith("postgres://"):
             return value.replace("postgres://", "postgresql+asyncpg://", 1)

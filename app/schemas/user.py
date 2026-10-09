@@ -34,3 +34,10 @@ class UserUpdate(BaseModel):
 
     bio: str | None = None
     avatar_url: str | None = None
+
+
+class TokenResponse(BaseModel):
+    """Ответ с access JWT."""
+
+    access_token: str
+    token_type: str = "bearer"

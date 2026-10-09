@@ -14,6 +14,19 @@ services:
       retries: 10
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://serveruniversy:serveruniversy@db:5432/serveruniversy
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in the project .env file}
+      DEBUG: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
   backend:
     build:
       context: .
@@ -27,8 +40,8 @@ services:
     volumes:
       - ./static:/app/static
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
 volumes:

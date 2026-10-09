@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
@@ -34,3 +35,16 @@ def create_access_token(subject: str | int) -> str:
         settings.secret_key.get_secret_value(),
         algorithm="HS256",
     )
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    """Проверяет подпись и срок действия access JWT."""
+    settings = get_settings()
+    payload = jwt.decode(
+        token,
+        settings.secret_key.get_secret_value(),
+        algorithms=["HS256"],
+    )
+    if not isinstance(payload, dict):
+        raise InvalidTokenError("JWT payload must be an object")
+    return payload

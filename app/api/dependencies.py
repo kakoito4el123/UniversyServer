@@ -1,51 +1,43 @@
-"""Общие зависимости API для определения приложения и пользователя."""
+"""Dependency injection для сервисов API и аутентифицированного пользователя."""
 
-import jwt
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.db.database import get_db
 from app.db.models import User
+from app.services.auth import AuthService
+from app.services.note import NoteService
+from app.services.user import UserService
 
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+
+def get_auth_service(db: AsyncSession = Depends(get_db)) -> AuthService:
+    return AuthService(db)
+
+
+def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
+    return UserService(db)
+
+
+def get_note_service(db: AsyncSession = Depends(get_db)) -> NoteService:
+    return NoteService(db)
 
 
 async def get_app_id(
     x_app_id: str = Header(..., alias="X-App-ID", description="ID приложения"),
 ) -> str:
-    """Требует идентификатор клиентского приложения в заголовке."""
+    """Получает tenant id из обязательного заголовка клиентского приложения."""
     return x_app_id
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    auth_service: AuthService = Depends(get_auth_service),
 ) -> User:
-    """Проверяет JWT и загружает его пользователя из базы данных."""
-    unauthorized = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Недействительный или отсутствующий токен",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    settings = get_settings()
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            settings.secret_key.get_secret_value(),
-            algorithms=["HS256"],
-        )
-        subject = payload.get("sub")
-        user_id = int(subject)
-    except (jwt.InvalidTokenError, TypeError, ValueError):
-        raise unauthorized from None
-
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise unauthorized
-
-    return user
+    """Проверяет JWT через сервис и возвращает существующего пользователя."""
+    if credentials is None:
+        raise UnauthorizedError()
+    return await auth_service.get_user_from_token(credentials.credentials)
