@@ -5,7 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import UnauthorizedError
-from app.db.database import get_db
+from app.db.session import get_db
 from app.db.models import User
 from app.services.auth import AuthService
 from app.services.note import NoteService

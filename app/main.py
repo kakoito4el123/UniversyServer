@@ -16,7 +16,7 @@ from app.core.exceptions import register_exception_handlers
 from app.core.logging_config import configure_logging
 from app.core.middlewares import LoggingMiddleware
 from app.db.base_model import Base
-from app.db.database import engine
+from app.db.session import engine
 from app.db.models import Note, User
 
 

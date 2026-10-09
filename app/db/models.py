@@ -1,6 +1,8 @@
 """ORM-модели приложения."""
 
-from sqlalchemy import ForeignKey, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base_model import Base
@@ -35,3 +37,24 @@ class Note(Base):
         index=True,
     )
     app_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+
+
+class RefreshToken(Base):
+    """Серверная запись одноразового refresh-токена."""
+
+    __tablename__ = "refresh_tokens"
+
+    jti: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )

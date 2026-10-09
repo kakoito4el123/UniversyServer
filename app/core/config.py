@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Настройки читаются из переменных окружения и файла .env."""
 
-    database_url: str
+    database_url: str = "sqlite+aiosqlite:///./test.db"
     secret_key: SecretStr
     debug: bool = False
     access_token_expire_minutes: int = 30
@@ -24,9 +24,13 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def normalize_database_url(cls, value: str) -> str:
-        """Добавляет драйвер asyncpg для стандартных PostgreSQL URL и разрешает SQLite."""
+        """Нормализует URL PostgreSQL и SQLite для асинхронных драйверов."""
         if not isinstance(value, str):
             raise ValueError("DATABASE_URL должен быть строкой")
+
+        value = value.strip()
+        if not value:
+            return "sqlite+aiosqlite:///./test.db"
 
         if value.startswith("sqlite+aiosqlite://"):
             return value
@@ -35,9 +39,9 @@ class Settings(BaseSettings):
         if value.startswith("sqlite://"):
             return value.replace("sqlite://", "sqlite+aiosqlite://", 1)
 
-        if value.startswith("postgres://"):
-            return value.replace("postgres://", "postgresql+asyncpg://", 1)
-        if value.startswith("postgresql://"):
+        if value.startswith(("postgres://", "postgresql://")):
+            if value.startswith("postgres://"):
+                return value.replace("postgres://", "postgresql+asyncpg://", 1)
             return value.replace("postgresql://", "postgresql+asyncpg://", 1)
         if value.startswith("postgresql+asyncpg://"):
             return value
