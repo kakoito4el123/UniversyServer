@@ -15,7 +15,9 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging_config import configure_logging
 from app.core.middlewares import LoggingMiddleware
+from app.db.base_model import Base
 from app.db.database import engine
+from app.db.models import Note, User
 
 
 settings = get_settings()
@@ -24,9 +26,13 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Освобождает пул соединений при остановке приложения."""
-    yield
-    await engine.dispose()
+    """Создает отсутствующие таблицы и освобождает пул при остановке."""
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        yield
+    finally:
+        await engine.dispose()
 
 
 app = FastAPI(
