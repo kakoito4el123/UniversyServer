@@ -25,6 +25,7 @@ class UserResponse(BaseModel):
 
     id: int
     username: str
+    balance: float = 0.0
     bio: str | None
     avatar_url: str | None
     role: UserRole

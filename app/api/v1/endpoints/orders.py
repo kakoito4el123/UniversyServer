@@ -65,6 +65,16 @@ async def update_order_status(
     return await service.update_status(order_id, app_id, data.status)
 
 
+@router.post("/{order_id}/pay", response_model=OrderResponse)
+async def pay_order(
+    order_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    app_id: Annotated[str, Depends(get_app_id)],
+    service: Annotated[OrderService, Depends(get_order_service)],
+) -> OrderResponse:
+    return await service.pay_order_with_balance(order_id, app_id, current_user)
+
+
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order(
     order_id: int,

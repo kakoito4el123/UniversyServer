@@ -33,6 +33,12 @@ class User(Base):
         nullable=False,
     )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    balance: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        server_default="0.0",
+        nullable=False,
+    )
     bio: Mapped[str | None] = mapped_column(String, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
     role: Mapped[UserRole] = mapped_column(

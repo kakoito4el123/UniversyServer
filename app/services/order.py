@@ -1,6 +1,7 @@
 """Бизнес-логика заказов с ограничением доступа по tenant и владельцу."""
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.core.exceptions import BadRequestError, ForbiddenError, NotFoundError
 from app.core.roles import UserRole
@@ -13,6 +14,7 @@ from app.services.cart import CartService
 
 class OrderService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.orders = OrderRepository(session)
         self.cart = CartService(session)
         self.cart_repository = CartRepository(session)
@@ -112,4 +114,47 @@ class OrderService:
         order = await self.orders.update_status(order_id, app_id, status)
         if order is None:
             raise NotFoundError("Заказ не найден")
+        return OrderResponse.model_validate(order)
+
+    async def pay_order_with_balance(
+        self,
+        order_id: int,
+        app_id: str,
+        current_user: User,
+    ) -> OrderResponse:
+        order_result = await self.session.execute(
+            select(Order)
+            .where(Order.id == order_id, Order.app_id == app_id)
+            .with_for_update()
+        )
+        order = order_result.scalar_one_or_none()
+        if order is None:
+            raise NotFoundError("Заказ не найден")
+
+        if (
+            order.user_id != current_user.id
+            and current_user.role != UserRole.ADMIN
+        ):
+            raise ForbiddenError("Нет доступа к этому заказу")
+
+        if order.status != "NEW":
+            raise BadRequestError("Заказ уже оплачен или отменен")
+
+        user_result = await self.session.execute(
+            select(User)
+            .where(User.id == current_user.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        payer = user_result.scalar_one_or_none()
+        if payer is None:
+            raise NotFoundError("Пользователь не найден")
+
+        if payer.balance < order.total_amount:
+            raise BadRequestError("Недостаточно средств на балансе")
+
+        payer.balance -= order.total_amount
+        order.status = "PAID"
+        await self.session.commit()
+        await self.session.refresh(order)
         return OrderResponse.model_validate(order)
