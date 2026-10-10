@@ -8,6 +8,7 @@ from app.core.exceptions import UnauthorizedError
 from app.db.session import get_db
 from app.db.models import User
 from app.services.auth import AuthService
+from app.services.cart import CartService
 from app.services.category import CategoryService
 from app.services.note import NoteService
 from app.services.product import ProductService
@@ -35,6 +36,10 @@ def get_category_service(db: AsyncSession = Depends(get_db)) -> CategoryService:
 
 def get_product_service(db: AsyncSession = Depends(get_db)) -> ProductService:
     return ProductService(db)
+
+
+def get_cart_service(db: AsyncSession = Depends(get_db)) -> CartService:
+    return CartService(db)
 
 
 async def get_app_id(

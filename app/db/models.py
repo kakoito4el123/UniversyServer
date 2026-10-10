@@ -1,5 +1,7 @@
 """ORM-модели приложения."""
 
+from __future__ import annotations
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -13,7 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.roles import UserRole
 from app.db.base_model import Base
@@ -144,3 +146,32 @@ class Product(Base):
         server_default="false",
         nullable=False,
     )
+    cart_items: Mapped[list[CartItem]] = relationship(back_populates="product")
+
+
+class CartItem(Base):
+    """Позиция корзины пользователя в конкретном приложении."""
+
+    __tablename__ = "cart_items"
+
+    app_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    quantity: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+    selected_options: Mapped[dict[str, object] | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+    product: Mapped[Product] = relationship(back_populates="cart_items")
