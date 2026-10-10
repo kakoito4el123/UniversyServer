@@ -19,7 +19,14 @@ def create_database_engine(settings: Settings) -> AsyncEngine:
         "pool_pre_ping": True,
     }
     if settings.database_url.startswith("postgresql+asyncpg://"):
-        engine_options.update(pool_size=10, max_overflow=20)
+        engine_options.update(
+            pool_size=10,
+            max_overflow=20,
+            connect_args={
+                "statement_cache_size": 0,
+                "prepared_statement_cache_size": 0,
+            },
+        )
     return create_async_engine(settings.database_url, **engine_options)
 
 
