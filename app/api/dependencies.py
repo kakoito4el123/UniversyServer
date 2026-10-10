@@ -11,6 +11,7 @@ from app.services.auth import AuthService
 from app.services.cart import CartService
 from app.services.category import CategoryService
 from app.services.note import NoteService
+from app.services.order import OrderService
 from app.services.product import ProductService
 from app.services.user import UserService
 
@@ -40,6 +41,10 @@ def get_product_service(db: AsyncSession = Depends(get_db)) -> ProductService:
 
 def get_cart_service(db: AsyncSession = Depends(get_db)) -> CartService:
     return CartService(db)
+
+
+def get_order_service(db: AsyncSession = Depends(get_db)) -> OrderService:
+    return OrderService(db)
 
 
 async def get_app_id(

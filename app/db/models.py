@@ -175,3 +175,56 @@ class CartItem(Base):
         nullable=True,
     )
     product: Mapped[Product] = relationship(back_populates="cart_items")
+
+
+class Order(Base):
+    """Заказ пользователя в конкретном приложении."""
+
+    __tablename__ = "orders"
+
+    app_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    total_amount: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(32),
+        default="NEW",
+        server_default="NEW",
+        nullable=False,
+    )
+    customer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    delivery_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    items: Mapped[list[OrderItem]] = relationship(
+        back_populates="order",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class OrderItem(Base):
+    """Снимок позиции товара на момент оформления заказа."""
+
+    __tablename__ = "order_items"
+
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    product_id: Mapped[int | None] = mapped_column(
+        ForeignKey("products.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
+    price_snapshot: Mapped[float] = mapped_column(Float, nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    selected_options: Mapped[dict[str, object] | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+    order: Mapped[Order] = relationship(back_populates="items")

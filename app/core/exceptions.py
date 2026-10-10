@@ -34,6 +34,11 @@ class NotFoundError(AppException):
         super().__init__(message, 404)
 
 
+class BadRequestError(AppException):
+    def __init__(self, message: str = "Некорректный запрос") -> None:
+        super().__init__(message, 400)
+
+
 class ConflictError(AppException):
     def __init__(self, message: str = "Конфликт данных") -> None:
         super().__init__(message, 409)
