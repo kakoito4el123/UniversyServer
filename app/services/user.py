@@ -33,6 +33,9 @@ class UserService:
             raise NotFoundError("Пользователь не найден")
         return user
 
+    async def list_users(self) -> list[User]:
+        return await self.users.get_all_users()
+
     async def update_profile(
         self,
         user_id: int,

@@ -2,9 +2,20 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Enum as SqlEnum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.roles import UserRole
 from app.db.base_model import Base
 
 
@@ -22,6 +33,18 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     bio: Mapped[str | None] = mapped_column(String, nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    role: Mapped[UserRole] = mapped_column(
+        SqlEnum(
+            UserRole,
+            name="user_role",
+            native_enum=False,
+            values_callable=lambda enum_type: [member.value for member in enum_type],
+            length=16,
+        ),
+        default=UserRole.USER,
+        server_default=UserRole.USER.value,
+        nullable=False,
+    )
 
 
 class Note(Base):
@@ -29,14 +52,21 @@ class Note(Base):
 
     __tablename__ = "notes"
 
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     app_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
+        index=True,
+    )
 
 
 class RefreshToken(Base):
@@ -57,4 +87,60 @@ class RefreshToken(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+
+class Category(Base):
+    """Категория каталога конкретного приложения."""
+
+    __tablename__ = "categories"
+
+    app_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id"),
+        nullable=True,
+    )
+    image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+
+class Product(Base):
+    """Товар каталога конкретного приложения."""
+
+    __tablename__ = "products"
+
+    app_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id"),
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    price: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    unit: Mapped[str] = mapped_column(
+        String(50),
+        default="шт",
+        server_default="шт",
+        nullable=False,
+    )
+    stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    attributes: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    main_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_available: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+    )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default="false",
+        nullable=False,
     )

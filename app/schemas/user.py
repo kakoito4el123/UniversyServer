@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.roles import UserRole
+
 
 class UserCreate(BaseModel):
     """Данные, необходимые для создания учетной записи."""
@@ -25,6 +27,7 @@ class UserResponse(BaseModel):
     username: str
     bio: str | None
     avatar_url: str | None
+    role: UserRole
 
     model_config = ConfigDict(from_attributes=True)
 

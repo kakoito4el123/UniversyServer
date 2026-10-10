@@ -8,7 +8,9 @@ from app.core.exceptions import UnauthorizedError
 from app.db.session import get_db
 from app.db.models import User
 from app.services.auth import AuthService
+from app.services.category import CategoryService
 from app.services.note import NoteService
+from app.services.product import ProductService
 from app.services.user import UserService
 
 
@@ -25,6 +27,14 @@ def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
 
 def get_note_service(db: AsyncSession = Depends(get_db)) -> NoteService:
     return NoteService(db)
+
+
+def get_category_service(db: AsyncSession = Depends(get_db)) -> CategoryService:
+    return CategoryService(db)
+
+
+def get_product_service(db: AsyncSession = Depends(get_db)) -> ProductService:
+    return ProductService(db)
 
 
 async def get_app_id(

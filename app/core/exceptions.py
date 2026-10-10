@@ -39,6 +39,11 @@ class ConflictError(AppException):
         super().__init__(message, 409)
 
 
+class ForbiddenError(AppException):
+    def __init__(self, message: str = "Недостаточно прав") -> None:
+        super().__init__(message, 403)
+
+
 class InvalidFileError(AppException):
     def __init__(self, message: str = "Недопустимый файл") -> None:
         super().__init__(message, 415)

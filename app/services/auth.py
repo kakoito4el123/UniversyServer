@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, UnauthorizedError
 from app.core.config import get_settings
+from app.core.roles import UserRole
 from app.db.models import RefreshToken, User
 from app.repositories.refresh_token import RefreshTokenRepository
 from app.repositories.user import UserRepository
@@ -41,6 +42,7 @@ class AuthService:
         subject: str | int,
         token_type: str,
         expires_in: timedelta,
+        role: UserRole | str | None = None,
     ) -> str:
         settings = get_settings()
         now = datetime.now(timezone.utc)
@@ -51,6 +53,8 @@ class AuthService:
             "exp": now + expires_in,
             "jti": uuid4().hex,
         }
+        if token_type == "access" and role is not None:
+            payload["role"] = role.value if isinstance(role, UserRole) else role
         return jwt.encode(
             payload,
             settings.secret_key.get_secret_value(),
@@ -58,8 +62,17 @@ class AuthService:
         )
 
     @classmethod
-    def create_access_token(cls, subject: str | int) -> str:
-        return cls._encode_token(subject, "access", cls.ACCESS_TOKEN_TTL)
+    def create_access_token(
+        cls,
+        subject: str | int,
+        role: UserRole | str = UserRole.USER,
+    ) -> str:
+        return cls._encode_token(
+            subject,
+            "access",
+            cls.ACCESS_TOKEN_TTL,
+            role,
+        )
 
     @classmethod
     def create_refresh_token(cls, subject: str | int) -> str:
@@ -87,8 +100,9 @@ class AuthService:
     def _add_refresh_session(
         self,
         subject: str | int,
+        role: UserRole | str,
     ) -> tuple[str, str]:
-        access_token = self.create_access_token(subject)
+        access_token = self.create_access_token(subject, role)
         refresh_token = self.create_refresh_token(subject)
         payload = self.verify_token(refresh_token, "refresh")
         refresh_jti = payload.get("jti")
@@ -105,8 +119,12 @@ class AuthService:
         )
         return access_token, refresh_token
 
-    async def issue_token_pair(self, subject: str | int) -> tuple[str, str]:
-        token_pair = self._add_refresh_session(subject)
+    async def issue_token_pair(
+        self,
+        subject: str | int,
+        role: UserRole | str = UserRole.USER,
+    ) -> tuple[str, str]:
+        token_pair = self._add_refresh_session(subject, role)
         await self.session.commit()
         return token_pair
 
@@ -134,7 +152,7 @@ class AuthService:
         user = await self.users.get_by_username(username)
         if user is None or not self.verify_password(password, user.hashed_password):
             raise UnauthorizedError("Неверный логин или пароль")
-        return await self.issue_token_pair(user.id)
+        return await self.issue_token_pair(user.id, user.role)
 
     async def refresh_tokens(self, refresh_token: str) -> tuple[str, str]:
         payload = self.verify_token(refresh_token, "refresh")
@@ -161,7 +179,7 @@ class AuthService:
             raise UnauthorizedError("Refresh token уже использован или отозван")
 
         try:
-            token_pair = self._add_refresh_session(user.id)
+            token_pair = self._add_refresh_session(user.id, user.role)
             await self.session.commit()
         except Exception:
             await self.session.rollback()
