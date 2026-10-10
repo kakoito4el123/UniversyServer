@@ -234,3 +234,50 @@ class OrderItem(Base):
         nullable=True,
     )
     order: Mapped[Order] = relationship(back_populates="items")
+
+
+class AppSettings(Base):
+    """Настройки витрины магазина для tenant-приложения."""
+
+    __tablename__ = "app_settings"
+
+    app_id: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    store_name: Mapped[str] = mapped_column(
+        String(255),
+        default="Мой Магазин",
+        server_default="Мой Магазин",
+        nullable=False,
+    )
+    currency: Mapped[str] = mapped_column(
+        String(16),
+        default="USD",
+        server_default="USD",
+        nullable=False,
+    )
+    delivery_fee: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        server_default="0.0",
+        nullable=False,
+    )
+    min_order_amount: Mapped[float] = mapped_column(
+        Float,
+        default=0.0,
+        server_default="0.0",
+        nullable=False,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default="true",
+        nullable=False,
+    )
+    extra_config: Mapped[dict[str, object] | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
