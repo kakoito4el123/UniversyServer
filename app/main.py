@@ -1,8 +1,12 @@
 """Точка сборки FastAPI-приложения."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
+import asyncio
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -15,21 +19,26 @@ from app.core.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging_config import configure_logging
 from app.core.middlewares import LoggingMiddleware
-from app.db.base_model import Base
 from app.db.session import engine
-from app.db.models import Note, User
 
 
 settings = get_settings()
 configure_logging()
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def run_migrations() -> None:
+    """Применяет все доступные миграции до запуска приложения."""
+    alembic_config = Config(str(PROJECT_ROOT / "alembic.ini"))
+    command.upgrade(alembic_config, "head")
+
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    """Создает отсутствующие таблицы и освобождает пул при остановке."""
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    """Применяет миграции перед запуском и освобождает пул при остановке."""
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        await asyncio.to_thread(run_migrations)
         yield
     finally:
         await engine.dispose()
